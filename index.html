@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>龍馬館売上目標・実績・タスク管理ポータル</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-icon">
+          <i class="fa-solid fa-martini-glass-citrus"></i>
+        </div>
+        <div class="logo-text">
+          <h1 class="logo-neon">龍馬館</h1>
+          <span>SALES PORTAL</span>
+        </div>
+      </div>
+      <nav class="sidebar-menu">
+        <button class="menu-item active" id="nav-dashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>ダッシュボード</span>
+        </button>
+        <button class="menu-item" id="nav-sheet">
+          <i class="fa-solid fa-table-list"></i>
+          <span>月別実績入力</span>
+        </button>
+        <button class="menu-item" id="nav-tasks">
+          <i class="fa-solid fa-list-check"></i>
+          <span>タスク管理</span>
+        </button>
+        <button class="menu-item" id="nav-menu">
+          <i class="fa-solid fa-utensils"></i>
+          <span>メニュー一覧</span>
+        </button>
+        <button class="menu-item" id="nav-equipment">
+          <i class="fa-solid fa-boxes-stacked"></i>
+          <span>備品・在庫管理</span>
+        </button>
+        <button class="menu-item" id="nav-analytics">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>曜日・客数分析</span>
+        </button>
+        <button class="menu-item" id="nav-settings">
+          <i class="fa-solid fa-sliders"></i>
+          <span>システム設定</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <p class="current-time-label">システム日時</p>
+        <p class="current-time-val" id="system-time">2026/07/15 18:06</p>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- HEADER -->
+      <header class="content-header">
+        <div class="header-title">
+          <h2 id="page-title" class="neon-title-cyan">ダッシュボード</h2>
+          <p id="page-subtitle" class="text-secondary">全体の目標達成状況と売上トレンド</p>
+        </div>
+        <div class="header-actions">
+          <div class="month-selector-wrapper">
+            <label for="global-month-select">対象月:</label>
+            <select id="global-month-select" class="form-select">
+              <option value="7">7月</option>
+              <option value="8">8月</option>
+              <option value="9">9月</option>
+              <option value="10">10月</option>
+              <option value="11">11月</option>
+              <option value="12">12月</option>
+            </select>
+          </div>
+          <button id="theme-toggle-btn" class="btn btn-outline" style="margin-right: 8px; width: 40px; height: 38px; padding: 0;" title="テーマ切り替え">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+          <button id="quick-save-btn" class="btn btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i> 保存
+          </button>
+        </div>
+      </header>
+
+      <!-- SECTION: DASHBOARD -->
+      <section id="section-dashboard" class="content-section active">
+        <!-- KPI Row -->
+        <div class="kpi-grid">
+          <!-- KPI 1 -->
+          <div class="kpi-card neon-card-cyan">
+            <div class="kpi-header">
+              <span class="kpi-title">月間目標売上</span>
+              <span class="kpi-icon icon-blue"><i class="fa-solid fa-bullseye"></i></span>
+            </div>
+            <div class="kpi-value neon-text-blue" id="kpi-month-target">¥700,000</div>
+            <div class="kpi-footer">
+              <span class="text-secondary" id="kpi-target-type">比率調整適用中</span>
+            </div>
+          </div>
+          <!-- KPI 2 -->
+          <div class="kpi-card neon-card-green">
+            <div class="kpi-header">
+              <span class="kpi-title">現在実績売上</span>
+              <span class="kpi-icon icon-green"><i class="fa-solid fa-coins"></i></span>
+            </div>
+            <div class="kpi-value neon-text-green" id="kpi-month-actual">¥0</div>
+            <div class="kpi-footer">
+              <span class="trend-badge" id="kpi-month-progress-badge">0.0%</span>
+              <span class="text-secondary">目標達成率</span>
+            </div>
+          </div>
+          <!-- KPI 3 -->
+          <div class="kpi-card neon-card-purple">
+            <div class="kpi-header">
+              <span class="kpi-title">週次目標状況</span>
+              <span class="kpi-icon icon-purple"><i class="fa-solid fa-calendar-week"></i></span>
+            </div>
+            <div class="kpi-value neon-text-purple" id="kpi-week-target">¥210,000</div>
+            <div class="kpi-footer">
+              <span class="text-secondary" id="kpi-week-status">7月週目標 (基準値)</span>
+            </div>
+          </div>
+          <!-- KPI 4 -->
+          <div class="kpi-card neon-card-yellow">
+            <div class="kpi-header">
+              <span class="kpi-title">総来客数 / 平均客単価</span>
+              <span class="kpi-icon icon-orange"><i class="fa-solid fa-users"></i></span>
+            </div>
+            <div class="kpi-value neon-text-yellow" id="kpi-customers-spend">0人 / ¥0</div>
+            <div class="kpi-footer">
+              <span class="text-secondary" id="kpi-avg-spend-desc">営業日数: 0日</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Split Grid (Calendar & Daily detail panel) -->
+        <div class="dashboard-split-grid">
+          <!-- Calendar Card -->
+          <div class="card calendar-card neon-card-purple">
+            <div class="card-header">
+              <h3 id="calendar-month-title" class="neon-text-purple"><i class="fa-solid fa-calendar-days"></i> 2026年7月 カレンダー</h3>
+              <span class="text-secondary text-sm">日付をクリックして詳細確認・編集</span>
+            </div>
+            <div class="calendar-wrapper">
+              <div class="calendar-weekdays">
+                <span>金</span><span>土</span><span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span>
+              </div>
+              <div class="calendar-grid" id="dashboard-calendar-grid">
+                <!-- Javascript renders cells -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Daily Detail & Shift Panel -->
+          <div class="card detail-panel-card neon-card-cyan" id="daily-detail-panel">
+            <div class="card-header border-bottom">
+              <h3><i class="fa-solid fa-circle-info"></i> デイリー詳細 & シフト</h3>
+              <span class="day-badge day-wed" id="detail-date-badge">7/15 (水)</span>
+            </div>
+            <div class="detail-panel-body">
+              <input type="hidden" id="detail-date-str" value="2026-07-15">
+              
+              <!-- Targets display -->
+              <div class="detail-row">
+                <span class="detail-label">今日の目標売上:</span>
+                <span class="detail-val font-bold text-accent neon-text-green" id="detail-target-sales">¥15,000</span>
+                <span class="badge badge-normal" id="detail-event-badge">通常営業</span>
+              </div>
+
+              <!-- Shift checklist -->
+              <div class="form-group mt-3">
+                <label class="form-label font-bold text-secondary">本日のシフト担当</label>
+                <div class="shift-checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" name="detail-shift" value="たいよう">
+                    <span class="custom-checkbox">たいよう</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" name="detail-shift" value="なな">
+                    <span class="custom-checkbox">なな</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" name="detail-shift" value="れんれん">
+                    <span class="custom-checkbox">れんれん</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Daily actual sales inputs -->
+              <div class="form-group-row mt-3">
+                <div class="form-group">
+                  <label for="detail-actual-sales" class="form-label font-bold text-secondary">実績売上 (円)</label>
+                  <input type="number" id="detail-actual-sales" class="form-control" placeholder="0" min="0">
+                </div>
+                <div class="form-group">
+                  <label for="detail-actual-customers" class="form-label font-bold text-secondary">客数 (人)</label>
+                  <input type="number" id="detail-actual-customers" class="form-control" placeholder="0" min="0">
+                </div>
+              </div>
+
+              <!-- Today's Tasks -->
+              <div class="today-tasks-section mt-3">
+                <h4 class="font-bold mb-2 text-secondary"><i class="fa-solid fa-list-check"></i> 本日締切のタスク</h4>
+                <div class="today-tasks-list" id="detail-tasks-list">
+                  <!-- JS dynamically renders today's tasks -->
+                  <p class="text-secondary text-sm">本日締切のタスクはありません。</p>
+                </div>
+              </div>
+
+              <!-- Daily Memo -->
+              <div class="form-group mt-3">
+                <label for="detail-memo" class="form-label font-bold text-secondary">メモ・備考</label>
+                <input type="text" id="detail-memo" class="form-control" placeholder="特記事項があれば入力...">
+              </div>
+
+              <div class="form-actions mt-4">
+                <button id="save-detail-btn" class="btn btn-primary w-full">
+                  <i class="fa-solid fa-circle-check"></i> 本日のデータを保存
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Summary -->
+        <div class="card progress-summary-card neon-card-green">
+          <div class="card-header">
+            <h3>売上達成度進捗</h3>
+            <span class="progress-percent-label neon-text-green" id="dashboard-progress-pct">0%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="dashboard-progress-fill" style="width: 0%"></div>
+          </div>
+          <div class="progress-milestones">
+            <span>0%</span>
+            <span>25%</span>
+            <span>50%</span>
+            <span>75%</span>
+            <span>100%</span>
+          </div>
+        </div>
+
+        <!-- Charts Container -->
+        <div class="charts-row">
+          <div class="card chart-card flex-2 neon-card-blue">
+            <div class="card-header">
+              <h3 class="neon-text-blue">売上推移トレンド（累積）</h3>
+              <p class="text-secondary">目標（点線）と実績の累積推移</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="cumulativeTrendChart"></canvas>
+            </div>
+          </div>
+          <div class="card chart-card flex-1 neon-card-purple">
+            <div class="card-header">
+              <h3 class="neon-text-purple">下半期目標 vs 実績</h3>
+              <p class="text-secondary">7月〜12月の合計比較</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="monthlyComparisonChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: MONTHLY SHEET -->
+      <section id="section-sheet" class="content-section">
+        <div class="card sheet-card neon-card-pink">
+          <div class="sheet-toolbar">
+            <div class="sheet-title-area">
+              <h3 id="sheet-month-title" class="neon-text-pink">7月の売上・成果入力シート</h3>
+              <span class="badge" id="sheet-mode-badge">比率調整モード</span>
+            </div>
+            <div class="sheet-actions">
+              <button id="fill-dummy-btn" class="btn btn-outline">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> テスト実績データ自動入力
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="sales-table" id="sales-data-table">
+              <thead>
+                <tr>
+                  <th>日付</th>
+                  <th>曜日</th>
+                  <th style="width: 120px;">イベント</th>
+                  <th style="width: 140px;">シフト担当</th>
+                  <th style="text-align: right; width: 110px;">目標売上</th>
+                  <th style="width: 120px;">実績売上(円)</th>
+                  <th style="width: 80px;">客数(人)</th>
+                  <th style="text-align: right; width: 100px;">客単価(円)</th>
+                  <th>メモ</th>
+                </tr>
+              </thead>
+              <tbody id="sales-table-body">
+                <!-- Javascript will render rows here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: TASKS -->
+      <section id="section-tasks" class="content-section">
+        <div class="tasks-layout-grid">
+          <!-- Task Form Card -->
+          <div class="card task-form-card neon-card-cyan">
+            <div class="card-header border-bottom">
+              <h3 class="neon-text-cyan"><i class="fa-solid fa-plus"></i> 新規タスクの登録</h3>
+              <p class="text-secondary">新しいやることタスクを追加します</p>
+            </div>
+            <div class="card-body mt-3">
+              <form id="task-creation-form">
+                <div class="form-group">
+                  <label for="task-name" class="form-label font-bold text-secondary">タスク名</label>
+                  <input type="text" id="task-name" class="form-control" placeholder="例: インスタ投稿(イベント告知)" required>
+                </div>
+                
+                <div class="form-group-row">
+                  <div class="form-group">
+                    <label for="task-category" class="form-label font-bold text-secondary">分類</label>
+                    <select id="task-category" class="form-select">
+                      <option value="全体">全体</option>
+                      <option value="インスタ">インスタ</option>
+                      <option value="イベント">イベント</option>
+                      <option value="通常営業">通常営業</option>
+                    </select>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label class="form-label font-bold text-secondary">担当者 (複数選択可)</label>
+                    <div id="task-assignees-container" style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px;">
+                      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                        <input type="checkbox" name="task-assignee-check" value="たいよう" style="cursor: pointer;"> たいよう
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                        <input type="checkbox" name="task-assignee-check" value="なな" style="cursor: pointer;"> なな
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                        <input type="checkbox" name="task-assignee-check" value="れんれん" style="cursor: pointer;"> れんれん
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                        <input type="checkbox" name="task-assignee-check" value="ながいさん" style="cursor: pointer;"> ながいさん
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                        <input type="checkbox" name="task-assignee-check" value="そーちゃん" style="cursor: pointer;"> そーちゃん
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="task-deadline" class="form-label font-bold text-secondary">締切日</label>
+                  <input type="date" id="task-deadline" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="task-notes" class="form-label font-bold text-secondary">備考・詳細</label>
+                  <textarea id="task-notes" class="form-control" rows="3" placeholder="タスクに関する詳細メモ..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-full mt-2">
+                  <i class="fa-solid fa-circle-plus"></i> タスクを追加する
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Task List Card -->
+          <div class="card task-list-card neon-card-purple">
+            <div class="card-header border-bottom">
+              <h3 class="neon-text-purple"><i class="fa-solid fa-list-check"></i> タスク一覧表</h3>
+              <div class="task-filters">
+                <select id="filter-category" class="form-select text-xs">
+                  <option value="all">すべての分類</option>
+                  <option value="全体">全体</option>
+                  <option value="インスタ">インスタ</option>
+                  <option value="イベント">イベント</option>
+                  <option value="通常営業">通常営業</option>
+                </select>
+                <select id="filter-assignee" class="form-select text-xs">
+                  <option value="all">すべての担当者</option>
+                  <option value="たいよう">たいよう</option>
+                  <option value="なな">なな</option>
+                  <option value="れんれん">れんれん</option>
+                  <option value="ながいさん">ながいさん</option>
+                  <option value="そーちゃん">そーちゃん</option>
+                </select>
+                <select id="filter-status" class="form-select text-xs">
+                  <option value="active">未完了のみ</option>
+                  <option value="all">すべて表示</option>
+                  <option value="completed">完了のみ</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="table-responsive mt-3" style="max-height: 480px; overflow-y: auto;">
+              <table class="sales-table">
+                <thead>
+                  <tr>
+                    <th style="width: 40px; text-align: center;">完了</th>
+                    <th>タスク名</th>
+                    <th style="width: 90px;">分類</th>
+                    <th style="width: 100px;">担当</th>
+                    <th style="width: 100px;">締切日</th>
+                    <th>備考</th>
+                    <th style="width: 50px; text-align: center;">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="task-table-body">
+                  <!-- JS dynamically renders task rows -->
+                </tbody>
+              </table>
+              <div id="no-tasks-message" class="text-center text-secondary py-4" style="display: none; padding: 24px;">
+                一致するタスクはありません。
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: MENU LIST -->
+      <section id="section-menu" class="content-section">
+        <!-- Edit Mode Toggle & Controls -->
+        <div class="menu-control-bar">
+          <label class="switch-container">
+            <input type="checkbox" id="menu-edit-mode-toggle">
+            <span class="switch-slider"></span>
+            <span class="switch-label"><i class="fa-solid fa-pen-to-square"></i> メニュー追加・編集モード</span>
+          </label>
+        </div>
+
+        <!-- Dynamic Menu Add Form (Shown only in edit mode) -->
+        <div class="card neon-card-cyan menu-add-form-card" id="menu-add-form-container" style="display: none; margin-bottom: 24px;">
+          <div class="card-header border-bottom">
+            <h3 class="neon-text-cyan"><i class="fa-solid fa-circle-plus"></i> 新しいメニューの追加</h3>
+            <p class="text-secondary">ドリンク、フード、おつまみ、ゲームなどのメニュー品目を後から追加できます</p>
+          </div>
+          <div class="card-body mt-3">
+            <form id="menu-item-form">
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="menu-item-category" class="form-label font-bold text-secondary">カテゴリー分類</label>
+                  <select id="menu-item-category" class="form-select">
+                    <optgroup label="プラン・セット">
+                      <option value="plans">メインプラン (ライト/スタンダード/プレミアム)</option>
+                    </optgroup>
+                    <optgroup label="ドリンク (DRINK)">
+                      <option value="drink_highball">ハイボール (Highball)</option>
+                      <option value="drink_shot">ショット (Shot)</option>
+                    </optgroup>
+                    <optgroup label="フード (FOOD)">
+                      <option value="food_fry">揚げ物・その他</option>
+                      <option value="food_dessert">デザート</option>
+                      <option value="food_otsumami">おつまみ 各種</option>
+                    </optgroup>
+                    <optgroup label="アミューズメント (PLAY)">
+                      <option value="play_chinchiro">チンチロ</option>
+                      <option value="play_punishment">罰ゲームセット</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="menu-item-name" class="form-label font-bold text-secondary">品目名 / ルール・詳細</label>
+                  <input type="text" id="menu-item-name" class="form-control" placeholder="例: 生ビール, クリームチーズクラッカー" required>
+                </div>
+              </div>
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="menu-item-price" class="form-label font-bold text-secondary">価格 / 特典・ルール内容</label>
+                  <input type="text" id="menu-item-price" class="form-control" placeholder="例: -500, 1杯無料, - 1200" required>
+                </div>
+                <div class="form-group" style="justify-content: flex-end;">
+                  <button type="submit" class="btn btn-primary w-full"><i class="fa-solid fa-plus"></i> 品目を追加する</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Menu Header -->
+        <div class="menu-neon-header">
+          <div class="neon-icon-left"><i class="fa-solid fa-compact-disc animate-spin-slow"></i></div>
+          <div class="menu-neon-title">
+            <span class="sub-neon">Cafe & Bar</span>
+            <h1 class="main-neon">龍馬館</h1>
+            <div class="neon-divider">MENU</div>
+          </div>
+          <div class="neon-icon-right"><i class="fa-solid fa-martini-glass"></i></div>
+        </div>
+
+        <!-- Plans grid (rendered dynamically) -->
+        <div class="plans-grid" id="menu-plans-container">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- Options grid (rendered dynamically) -->
+        <div class="option-menu-section">
+          <div class="card option-menu-card neon-card-purple">
+            <div class="option-header neon-text-purple">OPTION MENU</div>
+            
+            <div class="option-grid">
+              <!-- Left Column: Drink & Food -->
+              <div class="option-col">
+                <!-- Drink Category -->
+                <div class="menu-category" id="cat-drink">
+                  <h4 class="category-title color-neon-cyan">— DRINK —</h4>
+                  
+                  <div class="menu-sub-section">
+                    <span class="sub-category-header">○ ハイボール</span>
+                    <ul class="menu-items" id="menu-list-highball">
+                      <!-- JS renders -->
+                    </ul>
+                  </div>
+
+                  <div class="menu-sub-section mt-3">
+                    <span class="sub-category-header">○ ショット</span>
+                    <ul class="menu-items" id="menu-list-shot">
+                      <!-- JS renders -->
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Food Category -->
+                <div class="menu-category mt-4" id="cat-food">
+                  <h4 class="category-title color-neon-pink">— FOOD —</h4>
+                  
+                  <div class="menu-sub-section">
+                    <span class="sub-category-header">○ 揚げ物・その他</span>
+                    <ul class="menu-items" id="menu-list-fry">
+                      <!-- JS renders -->
+                    </ul>
+                  </div>
+
+                  <div class="menu-sub-section mt-3">
+                    <span class="sub-category-header">○ デザート</span>
+                    <ul class="menu-items" id="menu-list-dessert">
+                      <!-- JS renders -->
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Otsumami & Play & Punishment -->
+              <div class="option-col">
+                <!-- Otsumami Category -->
+                <div class="menu-category" id="cat-otsumami">
+                  <h4 class="category-title color-neon-green">○ おつまみ 各種 <span class="item-price-inline" id="otsumami-common-price">- 480</span></h4>
+                  <ul class="menu-bullet-list" id="menu-list-otsumami">
+                    <!-- JS renders -->
+                  </ul>
+                </div>
+
+                <!-- Play Category -->
+                <div class="menu-category mt-4" id="cat-play">
+                  <h4 class="category-title color-neon-yellow">— PLAY —</h4>
+                  
+                  <div class="menu-sub-section">
+                    <span class="sub-category-header">○ チンチロ</span>
+                    <ul class="menu-items" id="menu-list-chinchiro">
+                      <!-- JS renders -->
+                    </ul>
+                  </div>
+
+                  <div class="menu-sub-section mt-3">
+                    <span class="sub-category-header">○ 罰ゲームセット</span>
+                    <ul class="menu-items" id="menu-list-punishment">
+                      <!-- JS renders -->
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: EQUIPMENT -->
+      <section id="section-equipment" class="content-section">
+        <!-- Add Form Card -->
+        <div class="card neon-card-cyan mb-4" id="equipment-add-card">
+          <div class="card-header border-bottom">
+            <h3 class="neon-text-cyan"><i class="fa-solid fa-circle-plus"></i> 備品・在庫の追加</h3>
+            <p class="text-secondary">新しい備品やドリンク在庫を追加します</p>
+          </div>
+          <div class="card-body mt-3">
+            <form id="equipment-add-form">
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="eq-item-category" class="form-label font-bold text-secondary">カテゴリー</label>
+                  <select id="eq-item-category" class="form-select">
+                    <option value="リキュール">リキュール</option>
+                    <option value="シロップ">シロップ</option>
+                    <option value="ジュース">ジュース</option>
+                    <option value="ビール">ビール</option>
+                    <option value="ウイスキー">ウイスキー</option>
+                    <option value="クライナー">クライナー</option>
+                    <option value="ウォッカ">ウォッカ</option>
+                    <option value="スピリッツ">スピリッツ</option>
+                    <option value="テキーラ">テキーラ</option>
+                    <option value="その他">その他</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="eq-item-name" class="form-label font-bold text-secondary">備品・商品名</label>
+                  <input type="text" id="eq-item-name" class="form-control" placeholder="例: カシス, 生ビール" required>
+                </div>
+                <div class="form-group">
+                  <label for="eq-item-qty" class="form-label font-bold text-secondary">初期数量 (在庫数)</label>
+                  <input type="number" id="eq-item-qty" class="form-control" value="0" min="0" required>
+                </div>
+                <div class="form-group">
+                  <label for="eq-item-date" class="form-label font-bold text-secondary">入力日</label>
+                  <input type="date" id="eq-item-date" class="form-control" required>
+                </div>
+                <div class="form-group" style="justify-content: flex-end;">
+                  <button type="submit" class="btn btn-primary w-full"><i class="fa-solid fa-plus"></i> 追加する</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Inventory Control Bar -->
+        <div class="card neon-card-purple">
+          <div class="card-header border-bottom" style="display: flex; justify-content: space-between; align-items: center; flex-direction: row;">
+            <h3 class="neon-text-purple"><i class="fa-solid fa-boxes-stacked"></i> 備品・在庫一覧</h3>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="equipment-search" class="form-control text-xs" placeholder="商品名で検索..." style="width: 180px; padding: 6px 10px;">
+              <select id="equipment-filter-cat" class="form-select text-xs" style="width: 140px; padding: 6px 20px 6px 10px;">
+                <option value="all">すべてのカテゴリー</option>
+                <option value="リキュール">リキュール</option>
+                <option value="シロップ">シロップ</option>
+                <option value="ジュース">ジュース</option>
+                <option value="ビール">ビール</option>
+                <option value="ウイスキー">ウイスキー</option>
+                <option value="クライナー">クライナー</option>
+                <option value="ウォッカ">ウォッカ</option>
+                <option value="スピリッツ">スピリッツ</option>
+                <option value="テキーラ">テキーラ</option>
+                <option value="その他">その他</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body mt-3" style="overflow-x: auto;">
+            <table class="sales-table">
+              <thead>
+                <tr>
+                  <th>カテゴリー</th>
+                  <th>備品・商品名</th>
+                  <th style="width: 180px; text-align: center;">在庫数量</th>
+                  <th style="width: 120px; text-align: center;">管理日</th>
+                  <th style="width: 100px; text-align: center;">操作</th>
+                </tr>
+              </thead>
+              <tbody id="equipment-table-body">
+                <!-- Renders dynamically -->
+              </tbody>
+            </table>
+            <div id="no-equipment-message" class="text-center text-muted py-4" style="display: none; padding: 20px 0; text-align: center;">
+              該当する備品が見つかりません。
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: ANALYTICS -->
+      <section id="section-analytics" class="content-section">
+        <div class="charts-row">
+          <!-- Weekday analysis table -->
+          <div class="card chart-card flex-1 neon-card-cyan">
+            <div class="card-header">
+              <h3 class="neon-text-cyan">曜日別詳細分析</h3>
+              <p class="text-secondary">曜日ごとのパフォーマンス集計値</p>
+            </div>
+            <div class="table-responsive">
+              <table class="analytics-table">
+                <thead>
+                  <tr>
+                    <th>曜日</th>
+                    <th style="text-align: right;">平均売上</th>
+                    <th style="text-align: right;">平均客数</th>
+                    <th style="text-align: right;">平均客単価</th>
+                    <th>稼働日数</th>
+                  </tr>
+                </thead>
+                <tbody id="weekday-analytics-body">
+                  <!-- JS dynamically populates -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Weekday chart -->
+          <div class="card chart-card flex-1 neon-card-yellow">
+            <div class="card-header">
+              <h3 class="neon-text-yellow">曜日別平均パフォーマンス</h3>
+              <p class="text-secondary">売上と客数の関係性</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="weekdayPerformanceChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="charts-row mt-4">
+          <div class="card chart-card flex-1 neon-card-purple">
+            <div class="card-header">
+              <h3 class="neon-text-purple">イベントvs通常営業 分析</h3>
+              <p class="text-secondary">イベント日と通常営業日のパフォーマンス比較</p>
+            </div>
+            <div class="event-analysis-grid">
+              <div class="event-kpi">
+                <h4>イベント日平均</h4>
+                <div class="kpi-value text-accent neon-text-purple" id="analytics-event-sales">¥0</div>
+                <p id="analytics-event-count">0日稼働</p>
+              </div>
+              <div class="event-kpi">
+                <h4>通常営業日平均</h4>
+                <div class="kpi-value" id="analytics-regular-sales">¥0</div>
+                <p id="analytics-regular-count">0日稼働</p>
+              </div>
+              <div class="event-kpi-diff flex-col">
+                <h4>売上増加率 (倍率)</h4>
+                <div class="kpi-value neon-text-green" id="analytics-sales-multiplier">1.0x</div>
+                <p>イベント日の売上優位性</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: SETTINGS -->
+      <section id="section-settings" class="content-section">
+        <div class="settings-grid">
+          <!-- Left Column: Parameters -->
+          <div class="card settings-card flex-1 neon-card-cyan">
+            <div class="card-header border-bottom">
+              <h3 class="neon-text-cyan"><i class="fa-solid fa-calendar-days"></i> 月間目標金額の設定</h3>
+              <p class="text-secondary">各月の目標売上高を設定します。変更すると自動的に日々の目標へ反映されます。</p>
+            </div>
+            <div class="card-body mt-3">
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="target-m7">7月 目標売上</label>
+                  <div class="input-addon-group">
+                    <input type="number" id="target-m7" class="form-control" value="700000" step="50000">
+                    <span class="addon-text text-secondary">円</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="target-m8">8月 目標売上 (デフォルト)</label>
+                  <div class="input-addon-group">
+                    <input type="number" id="target-m8" class="form-control" value="850000" step="50000">
+                    <span class="addon-text text-secondary">円</span>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="target-m9">9月 目標売上</label>
+                  <div class="input-addon-group">
+                    <input type="number" id="target-m9" class="form-control" value="1000000" step="50000">
+                    <span class="addon-text text-secondary">円</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="target-m10">10月 目標売上</label>
+                  <div class="input-addon-group">
+                    <input type="number" id="target-m10" class="form-control" value="1200000" step="50000">
+                    <span class="addon-text text-secondary">円</span>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="target-m11">11月 目標売上</label>
+                  <div class="input-addon-group">
+                    <input type="number" id="target-m11" class="form-control" value="1300000" step="50000">
+                    <span class="addon-text text-secondary">円</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="target-m12">12月 目標売上</label>
+                  <div class="input-addon-group">
+                    <input type="number" id="target-m12" class="form-control" value="1500000" step="50000">
+                    <span class="addon-text text-secondary">円</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group mt-4">
+                <label for="target-week-base">7月の週次目標 (基準値)</label>
+                <div class="input-addon-group" style="max-width: 300px;">
+                  <input type="number" id="target-week-base" class="form-control" value="210000" step="10000">
+                  <span class="addon-text text-secondary">円</span>
+                </div>
+                <p class="form-help text-secondary">※他月の週次目標は、月間目標の比率（例：9月なら100万円/70万円 = 1.43倍）を掛け合わせて自動計算されます。</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: System Config & Rules -->
+          <div class="card settings-card flex-1 neon-card-purple">
+            <div class="card-header border-bottom">
+              <h3 class="neon-text-purple"><i class="fa-solid fa-gears"></i> 目標計算ロジック & 曜日別基本目標</h3>
+              <p class="text-secondary">曜日ごとの標準売上目標と、月間目標に収めるための計算モードを設定します。</p>
+            </div>
+            <div class="card-body mt-3">
+              <!-- Mode Selection -->
+              <div class="form-group">
+                <label class="form-label font-bold text-secondary">目標計算モード</label>
+                <div class="radio-card-group">
+                  <label class="radio-card">
+                    <input type="radio" name="calc-mode" value="proportional" checked>
+                    <div class="radio-card-content">
+                      <span class="radio-title">比率調整モード (推奨)</span>
+                      <span class="radio-desc">曜日別の目標比率を保ったまま、月間目標（70万等）に合計がピッタリ合うように日毎目標を調整します。</span>
+                    </div>
+                  </label>
+                  <label class="radio-card">
+                    <input type="radio" name="calc-mode" value="absolute">
+                    <div class="radio-card-content">
+                      <span class="radio-title">絶対値モード</span>
+                      <span class="radio-desc">曜日別目標で指定した金額（6万、1.5万等）をそのまま毎日適用します。月間合計は目標とズレが生じます。</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Weekday Defaults Config -->
+              <div class="form-group mt-4">
+                <label class="form-label font-bold text-secondary">曜日別デフォルト目標 (7月基準)</label>
+                <div class="weekday-config-grid">
+                  <div class="weekday-input-row">
+                    <span class="day-badge day-mon text-secondary">月曜日</span>
+                    <input type="number" id="def-mon" class="form-control text-right" value="60000"><span>円</span>
+                    <span class="text-accent text-sm neon-text-pink"><i class="fa-solid fa-star"></i> イベント</span>
+                  </div>
+                  <div class="weekday-input-row">
+                    <span class="day-badge day-tue text-secondary">火曜日</span>
+                    <input type="number" id="def-tue" class="form-control text-right" value="0"><span>円</span>
+                    <span class="text-secondary text-sm">休み(定休日)</span>
+                  </div>
+                  <div class="weekday-input-row">
+                    <span class="day-badge day-wed text-secondary">水曜日</span>
+                    <input type="number" id="def-wed" class="form-control text-right" value="15000"><span>円</span>
+                    <span class="text-secondary text-sm">通常営業</span>
+                  </div>
+                  <div class="weekday-input-row">
+                    <span class="day-badge day-thu text-secondary">木曜日</span>
+                    <input type="number" id="def-thu" class="form-control text-right" value="0"><span>円</span>
+                    <span class="text-secondary text-sm">休み(定休日)</span>
+                  </div>
+                  <div class="weekday-input-row">
+                    <span class="day-badge day-fri text-secondary">金曜日</span>
+                    <input type="number" id="def-fri" class="form-control text-right" value="60000"><span>円</span>
+                    <span class="text-accent text-sm neon-text-pink"><i class="fa-solid fa-star"></i> イベント</span>
+                  </div>
+                  <div class="weekday-input-row">
+                    <span class="day-badge day-sat text-secondary">土曜日</span>
+                    <input type="number" id="def-sat" class="form-control text-right" value="60000"><span>円</span>
+                    <span class="text-accent text-sm neon-text-pink"><i class="fa-solid fa-star"></i> イベント</span>
+                  </div>
+                  <div class="weekday-input-row">
+                    <span class="day-badge day-sun text-secondary">日曜日</span>
+                    <input type="number" id="def-sun" class="form-control text-right" value="15000"><span>円</span>
+                    <span class="text-secondary text-sm">通常営業</span>
+                  </div>
+                </div>
+                <p class="form-help mt-2 text-secondary">※7月の毎週土曜日は「ビアガーデン」のため、自動で目標が7万円に補正されます。火曜日・木曜日は定休日です。</p>
+              </div>
+
+              <!-- Action buttons -->
+              <div class="form-actions border-top mt-4 pt-3">
+                <button id="apply-settings-btn" class="btn btn-primary">設定を適用・再計算</button>
+                <button id="export-data-btn" class="btn btn-outline"><i class="fa-solid fa-download"></i> データ書き出し (JSON)</button>
+                <button id="import-data-btn" class="btn btn-outline" onclick="document.getElementById('import-file-input').click()"><i class="fa-solid fa-upload"></i> 取り込み (JSON)</button>
+                <input type="file" id="import-file-input" style="display: none;" accept=".json">
+                <button id="reset-all-btn" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i> 全リセット</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cloud Sync & Spreadsheet Integration -->
+        <div class="card neon-card-cyan mt-4" style="margin-top: 24px;">
+          <div class="card-header border-bottom">
+            <h3 class="neon-text-cyan"><i class="fa-solid fa-cloud-arrow-up"></i> Googleスプレッドシート連携（クラウド同期）</h3>
+            <span class="badge badge-normal" id="cloud-status-badge">同期オフ（ローカル保存のみ）</span>
+          </div>
+          <div class="card-body mt-3">
+            <div class="form-group">
+              <label for="settings-cloud-url" class="form-label font-bold text-secondary">Google Apps Script ウェブアプリのURL</label>
+              <div class="input-addon-group">
+                <input type="url" id="settings-cloud-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" style="flex-grow: 1;">
+                <button id="test-cloud-btn" class="btn btn-outline" style="margin-left: 8px; white-space: nowrap;"><i class="fa-solid fa-plug"></i> 接続テスト</button>
+              </div>
+              <p class="form-help text-secondary mt-1">※URLを入力し「接続テスト」に成功するとクラウド同期が有効化され、メンバー間のリアルタイム同期が開始します。</p>
+            </div>
+
+            <!-- GAS setup documentation -->
+            <div class="gas-setup-guide mt-4 pt-3 border-top" style="border-top: 1px dashed rgba(255,255,255,0.08); margin-top: 20px;">
+              <h4 class="font-bold text-secondary text-sm mb-2"><i class="fa-solid fa-circle-info"></i> スプレッドシート側の連携設定手順</h4>
+              <ol class="text-secondary text-xs pl-4" style="line-height: 1.6; display: flex; flex-direction: column; gap: 4px; padding-left: 18px;">
+                <li>1. <strong>Googleスプレッドシート</strong>を新規作成します。</li>
+                <li>2. メニューの「<strong>拡張機能</strong>」＞「<strong>Apps Script</strong>」をクリックします。</li>
+                <li>3. 最初から書かれているコードをすべて消して、以下のコードをそのまま貼り付けます。</li>
+                <li>4. 右上の「<strong>デプロイ</strong>」＞「<strong>新しいデプロイ</strong>」をクリックします。</li>
+                <li>5. 歯車アイコンから「<strong>ウェブアプリ</strong>」を選択し、以下の通りに設定します：
+                  <ul class="pl-4 mt-1" style="list-style-type: circle; padding-left: 18px;">
+                    <li>次のユーザーとして実行：<strong>自分 (YOUR_EMAIL)</strong></li>
+                    <li>アクセスできるユーザー：<strong>全員 (Anyone)</strong></li>
+                  </ul>
+                </li>
+                <li>6. デプロイボタンを押し、アクセスを承認した後、生成された「<strong>ウェブアプリのURL</strong>」をコピーして上記の入力欄に貼り付け「接続テスト」を押してください。</li>
+              </ol>
+
+              <!-- Script source code box -->
+              <div class="form-group mt-3">
+                <label class="form-label font-bold text-secondary text-xs">コピー用 Google Apps Script コード:</label>
+                <textarea class="form-control text-xs font-mono" id="gas-script-box" readonly rows="6" style="background-color: rgba(0,0,0,0.4); color: #cffafe; resize: none; font-family: monospace; line-height: 1.4;">// Google Apps Script for Ryomakan Sales Portal cloud sync
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var cell = sheet.getRange(1, 1);
+  var val = cell.getValue();
+  return ContentService.createTextOutput(val || "{}").setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var payload = e.postData.contents;
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var cell = sheet.getRange(1, 1);
+  cell.setValue(payload);
+  return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
+}
+</textarea>
+                <button id="copy-gas-code-btn" class="btn btn-outline text-xs mt-1" style="padding: 4px 10px;"><i class="fa-solid fa-copy"></i> コードをクリップボードにコピー</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">
+    <span class="toast-message">データを保存しました。</span>
+  </div>
+
+  <!-- App Script -->
+  <script src="app.js"></script>
+</body>
+</html>

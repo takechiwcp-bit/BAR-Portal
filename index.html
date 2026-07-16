@@ -118,7 +118,7 @@
             <div class="kpi-value neon-text-green" id="kpi-month-actual">¥0</div>
             <div class="kpi-footer">
               <span class="trend-badge" id="kpi-month-progress-badge">0.0%</span>
-              <span class="text-secondary">目標達成率</span>
+              <span class="text-secondary">本日までの目標達成率</span>
             </div>
           </div>
           <!-- KPI 3 -->
@@ -176,7 +176,12 @@
               <div class="detail-row">
                 <span class="detail-label">今日の目標売上:</span>
                 <span class="detail-val font-bold text-accent neon-text-green" id="detail-target-sales">¥15,000</span>
-                <span class="badge badge-normal" id="detail-event-badge">通常営業</span>
+                <select id="detail-event-select" class="form-select text-xs ml-2" style="width: 120px; padding: 2px 8px;">
+                  <option value="通常営業">通常営業</option>
+                  <option value="イベント日">イベント日</option>
+                  <option value="ビアガーデン">ビアガーデン</option>
+                  <option value="定休日">定休日</option>
+                </select>
               </div>
 
               <!-- Shift checklist -->
@@ -237,7 +242,7 @@
         <!-- Progress Summary -->
         <div class="card progress-summary-card neon-card-green">
           <div class="card-header">
-            <h3>売上達成度進捗</h3>
+            <h3>売上達成度進捗 (本日まで)</h3>
             <span class="progress-percent-label neon-text-green" id="dashboard-progress-pct">0%</span>
           </div>
           <div class="progress-bar-container">
@@ -300,6 +305,7 @@
                   <th style="width: 140px;">シフト担当</th>
                   <th style="text-align: right; width: 110px;">目標売上</th>
                   <th style="width: 120px;">実績売上(円)</th>
+                  <th style="text-align: right; width: 80px;">達成率</th>
                   <th style="width: 80px;">客数(人)</th>
                   <th style="text-align: right; width: 100px;">客単価(円)</th>
                   <th>メモ</th>
@@ -804,12 +810,12 @@
               </div>
 
               <div class="form-group mt-4">
-                <label for="target-week-base">7月の週次目標 (基準値)</label>
+                <label for="target-week-base">当月の週次目標（自動計算結果）</label>
                 <div class="input-addon-group" style="max-width: 300px;">
-                  <input type="number" id="target-week-base" class="form-control" value="210000" step="10000">
+                  <input type="number" id="target-week-base" class="form-control" value="210000" readonly disabled style="background-color: rgba(255,255,255,0.05); color: #888; pointer-events: none;">
                   <span class="addon-text text-secondary">円</span>
                 </div>
-                <p class="form-help text-secondary">※他月の週次目標は、月間目標の比率（例：9月なら100万円/70万円 = 1.43倍）を掛け合わせて自動計算されます。</p>
+                <p class="form-help text-secondary">※週次目標は「月次目標 × 1.2 × 1/4」で自動的に計算されます（編集不可）。</p>
               </div>
             </div>
           </div>
@@ -818,71 +824,86 @@
           <div class="card settings-card flex-1 neon-card-purple">
             <div class="card-header border-bottom">
               <h3 class="neon-text-purple"><i class="fa-solid fa-gears"></i> 目標計算ロジック & 曜日別基本目標</h3>
-              <p class="text-secondary">曜日ごとの標準売上目標と、月間目標に収めるための計算モードを設定します。</p>
+              <p class="text-secondary">曜日ごとの目標比率と、自動計算されるデフォルト目標の確認を行います。</p>
             </div>
             <div class="card-body mt-3">
               <!-- Mode Selection -->
               <div class="form-group">
-                <label class="form-label font-bold text-secondary">目標計算モード</label>
+                <label class="form-label font-bold text-secondary">目標計算モード (固定)</label>
                 <div class="radio-card-group">
-                  <label class="radio-card">
-                    <input type="radio" name="calc-mode" value="proportional" checked>
+                  <label class="radio-card" style="opacity: 0.8; pointer-events: none;">
+                    <input type="radio" name="calc-mode" value="proportional" checked disabled>
                     <div class="radio-card-content">
-                      <span class="radio-title">比率調整モード (推奨)</span>
-                      <span class="radio-desc">曜日別の目標比率を保ったまま、月間目標（70万等）に合計がピッタリ合うように日毎目標を調整します。</span>
-                    </div>
-                  </label>
-                  <label class="radio-card">
-                    <input type="radio" name="calc-mode" value="absolute">
-                    <div class="radio-card-content">
-                      <span class="radio-title">絶対値モード</span>
-                      <span class="radio-desc">曜日別目標で指定した金額（6万、1.5万等）をそのまま毎日適用します。月間合計は目標とズレが生じます。</span>
+                      <span class="radio-title">曜日依存・比率固定計算モード (自動適用中)</span>
+                      <span class="radio-desc">設定された曜日比率に従って、月間目標から日々の目標を四捨五入（千の位）して自動計算します。</span>
                     </div>
                   </label>
                 </div>
               </div>
 
-              <!-- Weekday Defaults Config -->
+              <!-- Weekday Ratio Config -->
               <div class="form-group mt-4">
-                <label class="form-label font-bold text-secondary">曜日別デフォルト目標 (7月基準)</label>
-                <div class="weekday-config-grid">
-                  <div class="weekday-input-row">
-                    <span class="day-badge day-mon text-secondary">月曜日</span>
-                    <input type="number" id="def-mon" class="form-control text-right" value="60000"><span>円</span>
-                    <span class="text-accent text-sm neon-text-pink"><i class="fa-solid fa-star"></i> イベント</span>
+                <label class="form-label font-bold text-secondary">日別目標の週次配分比率</label>
+                <p class="form-help text-secondary mb-2">1週間の目標金額を、各営業日にどういう割合で分配するかを設定します。デフォルトは「18：3」の比率です。</p>
+                <div class="form-group-row">
+                  <div class="form-group">
+                    <label for="setting-event-weight" class="text-accent neon-text-pink"><i class="fa-solid fa-star"></i> イベント日（月・金・土）の全体比率</label>
+                    <div class="input-addon-group">
+                      <input type="number" id="setting-event-weight" class="form-control text-right" value="18" step="1" min="1">
+                      <span class="addon-text text-secondary"></span>
+                    </div>
                   </div>
-                  <div class="weekday-input-row">
-                    <span class="day-badge day-tue text-secondary">火曜日</span>
-                    <input type="number" id="def-tue" class="form-control text-right" value="0"><span>円</span>
-                    <span class="text-secondary text-sm">休み(定休日)</span>
-                  </div>
-                  <div class="weekday-input-row">
-                    <span class="day-badge day-wed text-secondary">水曜日</span>
-                    <input type="number" id="def-wed" class="form-control text-right" value="15000"><span>円</span>
-                    <span class="text-secondary text-sm">通常営業</span>
-                  </div>
-                  <div class="weekday-input-row">
-                    <span class="day-badge day-thu text-secondary">木曜日</span>
-                    <input type="number" id="def-thu" class="form-control text-right" value="0"><span>円</span>
-                    <span class="text-secondary text-sm">休み(定休日)</span>
-                  </div>
-                  <div class="weekday-input-row">
-                    <span class="day-badge day-fri text-secondary">金曜日</span>
-                    <input type="number" id="def-fri" class="form-control text-right" value="60000"><span>円</span>
-                    <span class="text-accent text-sm neon-text-pink"><i class="fa-solid fa-star"></i> イベント</span>
-                  </div>
-                  <div class="weekday-input-row">
-                    <span class="day-badge day-sat text-secondary">土曜日</span>
-                    <input type="number" id="def-sat" class="form-control text-right" value="60000"><span>円</span>
-                    <span class="text-accent text-sm neon-text-pink"><i class="fa-solid fa-star"></i> イベント</span>
-                  </div>
-                  <div class="weekday-input-row">
-                    <span class="day-badge day-sun text-secondary">日曜日</span>
-                    <input type="number" id="def-sun" class="form-control text-right" value="15000"><span>円</span>
-                    <span class="text-secondary text-sm">通常営業</span>
+                  <div class="form-group">
+                    <label for="setting-regular-weight" class="text-accent neon-text-cyan"><i class="fa-regular fa-star"></i> 通常営業日（水・日）の全体比率</label>
+                    <div class="input-addon-group">
+                      <input type="number" id="setting-regular-weight" class="form-control text-right" value="3" step="1" min="1">
+                      <span class="addon-text text-secondary"></span>
+                    </div>
                   </div>
                 </div>
-                <p class="form-help mt-2 text-secondary">※7月の毎週土曜日は「ビアガーデン」のため、自動で目標が7万円に補正されます。火曜日・木曜日は定休日です。</p>
+              </div>
+
+              <!-- Weekday Defaults Config -->
+              <div class="form-group mt-4">
+                <label class="form-label font-bold text-secondary">曜日別基本スケジュールと日割目標 (当月基準 - 自動計算値)</label>
+                <div class="weekday-config-grid">
+                  <div class="weekday-input-row" style="opacity: 0.7;">
+                     <span class="day-badge day-mon text-secondary">月曜日</span>
+                     <input type="number" id="def-mon" class="form-control text-right" value="60000" readonly disabled style="background-color: transparent;"><span>円</span>
+                     <span class="text-accent text-sm neon-text-pink"><i class="fa-solid fa-star"></i> イベント日</span>
+                  </div>
+                  <div class="weekday-input-row" style="opacity: 0.7;">
+                     <span class="day-badge day-tue text-secondary">火曜日</span>
+                     <input type="number" id="def-tue" class="form-control text-right" value="0" readonly disabled style="background-color: transparent;"><span>円</span>
+                     <span class="text-secondary text-sm">定休日</span>
+                  </div>
+                  <div class="weekday-input-row" style="opacity: 0.7;">
+                     <span class="day-badge day-wed text-secondary">水曜日</span>
+                     <input type="number" id="def-wed" class="form-control text-right" value="15000" readonly disabled style="background-color: transparent;"><span>円</span>
+                     <span class="text-accent text-sm neon-text-cyan"><i class="fa-regular fa-star"></i> 通常営業</span>
+                  </div>
+                  <div class="weekday-input-row" style="opacity: 0.7;">
+                     <span class="day-badge day-thu text-secondary">木曜日</span>
+                     <input type="number" id="def-thu" class="form-control text-right" value="0" readonly disabled style="background-color: transparent;"><span>円</span>
+                     <span class="text-secondary text-sm">定休日</span>
+                  </div>
+                  <div class="weekday-input-row" style="opacity: 0.7;">
+                     <span class="day-badge day-fri text-secondary">金曜日</span>
+                     <input type="number" id="def-fri" class="form-control text-right" value="60000" readonly disabled style="background-color: transparent;"><span>円</span>
+                     <span class="text-accent text-sm neon-text-pink"><i class="fa-solid fa-star"></i> イベント日</span>
+                  </div>
+                  <div class="weekday-input-row" style="opacity: 0.7;">
+                     <span class="day-badge day-sat text-secondary">土曜日</span>
+                     <input type="number" id="def-sat" class="form-control text-right" value="60000" readonly disabled style="background-color: transparent;"><span>円</span>
+                     <span class="text-accent text-sm neon-text-pink"><i class="fa-solid fa-star"></i> イベント日</span>
+                  </div>
+                  <div class="weekday-input-row" style="opacity: 0.7;">
+                     <span class="day-badge day-sun text-secondary">日曜日</span>
+                     <input type="number" id="def-sun" class="form-control text-right" value="15000" readonly disabled style="background-color: transparent;"><span>円</span>
+                     <span class="text-accent text-sm neon-text-pink"><i class="fa-solid fa-star"></i> 営業日 (週目標の 1/14)</span>
+                  </div>
+                </div>
+                <p class="form-help mt-2 text-secondary">※曜日目標は週次目標をもとに自動で割り振られます。日曜日・水曜日は 1/14、火曜日・木曜日・金曜日・土曜日は 4/14、月曜日は定休日（0円）となります。千の位で四捨五入されます。</p>
               </div>
 
               <!-- Action buttons -->
@@ -935,7 +956,8 @@
                 <label class="form-label font-bold text-secondary text-xs">コピー用 Google Apps Script コード:</label>
                 <textarea class="form-control text-xs font-mono" id="gas-script-box" readonly rows="6" style="background-color: rgba(0,0,0,0.4); color: #cffafe; resize: none; font-family: monospace; line-height: 1.4;">// Google Apps Script for Ryomakan Sales Portal cloud sync
 function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheets()[0];
   var cell = sheet.getRange(1, 1);
   var val = cell.getValue();
   return ContentService.createTextOutput(val || "{}").setMimeType(ContentService.MimeType.JSON);
@@ -943,7 +965,8 @@ function doGet(e) {
 
 function doPost(e) {
   var payload = e.postData.contents;
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheets()[0];
   var cell = sheet.getRange(1, 1);
   cell.setValue(payload);
   return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);

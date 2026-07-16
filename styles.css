@@ -1772,3 +1772,201 @@ body {
   box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
 }
 
+/* ==========================================================================
+   NEON BACKGROUND LAYER
+   ========================================================================== */
+#neon-background-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.4;
+  overflow: hidden;
+}
+
+:root[data-theme="light"] #neon-background-layer {
+  opacity: 0.15; /* Much more transparent in light mode */
+}
+
+.neon-icon {
+  position: absolute;
+  font-size: 2rem;
+  color: transparent; /* Text shadow will create the glow */
+}
+
+/* Neon Colors using text-shadow */
+.icon-martini { top: 10%; left: 15%; font-size: 3rem; transform: rotate(-15deg); text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan); }
+.icon-heart { top: 25%; left: 80%; font-size: 2.5rem; transform: rotate(10deg); text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink); }
+.icon-star { top: 70%; left: 10%; font-size: 4rem; transform: rotate(45deg); text-shadow: 0 0 10px var(--neon-yellow), 0 0 20px var(--neon-yellow); }
+.icon-gem { top: 80%; left: 70%; font-size: 3.5rem; transform: rotate(-10deg); text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan); }
+.icon-dice { top: 45%; left: 25%; font-size: 2.5rem; transform: rotate(20deg); text-shadow: 0 0 10px var(--neon-red), 0 0 20px var(--neon-red); }
+.icon-bolt { top: 60%; left: 85%; font-size: 3rem; transform: rotate(-25deg); text-shadow: 0 0 10px var(--neon-yellow), 0 0 20px var(--neon-yellow); }
+.icon-bell { top: 15%; left: 55%; font-size: 2rem; transform: rotate(15deg); text-shadow: 0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple); }
+.icon-crown { top: 50%; left: 60%; font-size: 4rem; transform: rotate(-5deg); text-shadow: 0 0 10px var(--neon-yellow), 0 0 20px var(--neon-yellow); }
+.icon-clover { top: 85%; left: 40%; font-size: 3rem; transform: rotate(10deg); text-shadow: 0 0 10px var(--neon-emerald), 0 0 20px var(--neon-emerald); }
+.icon-lemon { top: 35%; left: 10%; font-size: 2rem; transform: rotate(-30deg); text-shadow: 0 0 10px var(--neon-yellow), 0 0 20px var(--neon-yellow); }
+.icon-7 { top: 30%; left: 45%; font-size: 3rem; font-family: var(--font-orbitron); text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink); }
+
+.icon-star2 { top: 15%; left: 35%; font-size: 1.5rem; transform: rotate(15deg); text-shadow: 0 0 10px var(--neon-yellow), 0 0 20px var(--neon-yellow); }
+.icon-heart2 { top: 65%; left: 50%; font-size: 2rem; transform: rotate(-20deg); text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink); }
+.icon-martini2 { top: 85%; left: 90%; font-size: 2.5rem; transform: rotate(20deg); text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan); }
+.icon-gem2 { top: 5%; left: 85%; font-size: 2rem; transform: rotate(15deg); text-shadow: 0 0 10px var(--neon-emerald), 0 0 20px var(--neon-emerald); }
+.icon-dice2 { top: 90%; left: 15%; font-size: 2rem; transform: rotate(-15deg); text-shadow: 0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple); }
+
+/* ==========================================================================
+   MOBILE RESPONSIVENESS (Max Width: 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+  
+  .app-container {
+    flex-direction: column;
+  }
+
+  /* Transform Sidebar to Bottom Navigation */
+  .sidebar {
+    width: 100vw;
+    height: 70px;
+    flex-direction: row;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    padding: 0;
+    border-right: none;
+    border-top: 1px solid rgba(189, 0, 255, 0.15);
+    z-index: 100;
+    justify-content: space-around;
+    align-items: center;
+    background-color: var(--bg-sidebar);
+    box-shadow: 0 -2px 20px rgba(189, 0, 255, 0.1);
+  }
+
+  .sidebar-header,
+  .sidebar-footer {
+    display: none; /* Hide logo and clock on mobile bottom nav */
+  }
+
+  .sidebar-menu {
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-around;
+    gap: 0;
+  }
+
+  .menu-item {
+    flex-direction: column;
+    padding: 10px 4px;
+    gap: 6px;
+    font-size: 10px;
+    border-radius: 0;
+    justify-content: center;
+    align-items: center;
+    border: none !important;
+    text-align: center;
+  }
+
+  .menu-item i {
+    font-size: 20px;
+    margin-bottom: 2px;
+  }
+
+  .menu-item.active {
+    box-shadow: inset 0 4px 0 var(--neon-cyan);
+    background-color: rgba(0, 240, 255, 0.05);
+    color: var(--neon-cyan);
+  }
+
+  .menu-item span {
+    font-size: 9px;
+    letter-spacing: -0.5px;
+    display: block;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Make the main content area adjust for bottom nav */
+  .main-content {
+    padding: 20px 16px;
+    padding-bottom: 90px; /* Space for bottom nav */
+    gap: 20px;
+    width: 100vw;
+  }
+
+  /* Header */
+  .content-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  
+  .header-title h2 {
+    font-size: 22px;
+  }
+
+  /* Grids to single column */
+  .kpi-grid,
+  .dashboard-split-grid,
+  .charts-row,
+  .settings-grid,
+  .option-grid,
+  .plans-grid {
+    grid-template-columns: 1fr !important;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .form-group-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Tables */
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+  }
+
+  .sales-table {
+    min-width: 800px; /* Force minimum width to enable scrolling */
+  }
+
+  .sales-table th, .sales-table td {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .card-header h3 {
+    font-size: 16px;
+  }
+  
+  .task-filters {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .task-filters select {
+    width: 100%;
+  }
+}

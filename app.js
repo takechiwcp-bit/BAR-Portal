@@ -450,7 +450,16 @@ function setupEventListeners() {
   document.getElementById('theme-toggle-btn').addEventListener('click', () => {
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
+    
+    if (!document.startViewTransition) {
+      setTheme(newTheme);
+      return;
+    }
+    
+    document.documentElement.dataset.themeTransition = newTheme;
+    document.startViewTransition(() => {
+      setTheme(newTheme);
+    });
   });
 
   // Apply Settings Button

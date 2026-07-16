@@ -132,16 +132,18 @@ const defaultSettings = {
     12: 1500000
   },
   weeklyTargetBase: 210000, // Weekly target for July
+  eventWeight: 18,
+  regularWeight: 3,
   weekdayTargets: {
-    1: 60000,  // Mon (Event)
-    2: 0,      // Tue (Closed/0)
-    3: 15000,  // Wed (Regular)
-    4: 0,      // Thu (Closed/0)
-    5: 60000,  // Fri (Event)
-    6: 60000,  // Sat (Event - standard)
-    0: 15000   // Sun (Regular)
+    1: 0,      // Mon (Closed)
+    2: 60000,  // Tue (Event - 4/14)
+    3: 15000,  // Wed (Regular - 1/14)
+    4: 60000,  // Thu (Event - 4/14)
+    5: 60000,  // Fri (Event - 4/14)
+    6: 60000,  // Sat (Event - 4/14)
+    0: 15000   // Sun (Regular - 1/14)
   },
-  satBeerGardenJulyTarget: 70000, // July Saturday target
+  satBeerGardenJulyTarget: 60000, // July Saturday target
   calcMode: 'proportional' // 'proportional' or 'absolute'
 };
 
@@ -240,26 +242,12 @@ function loadData() {
     dailyData = {};
   }
 
-  // Clear simulated July data and load user-specified real July data (Run once)
-  const JULY_INIT_KEY = 'ryomakan_portal_july_real_init_v2';
-  if (!localStorage.getItem(JULY_INIT_KEY)) {
-    // Clear July 2026 dates
-    const julyDates = getDatesInMonth(7);
-    julyDates.forEach(date => {
-      const dateStr = formatDate(date);
-      delete dailyData[dateStr];
-    });
-
-    // Populate user inputs for July
-    dailyData["2026-07-03"] = { actualSales: 68700, customers: 25, event: "みやまきプチ同窓会", shifts: [], memo: "" };
-    dailyData["2026-07-06"] = { actualSales: 94000, customers: 30, event: "学生社会人交流会", shifts: [], memo: "" };
-    dailyData["2026-07-08"] = { actualSales: 1300, customers: 3, event: "通常営業", shifts: [], memo: "" };
-    dailyData["2026-07-10"] = { actualSales: 14880, customers: 7, event: "イベント日", shifts: [], memo: "" };
-    dailyData["2026-07-11"] = { actualSales: 48800, customers: 30, event: "ビアガーデン", shifts: [], memo: "" };
-    dailyData["2026-07-12"] = { actualSales: 800, customers: 1, event: "通常営業", shifts: [], memo: "" };
-
+  // いま入っている売り上げのデータをいったん入力し直すために消去する処理 (Run once)
+  const CLEAR_DATA_V3_KEY = 'ryomakan_portal_clear_data_v3';
+  if (!localStorage.getItem(CLEAR_DATA_V3_KEY)) {
+    dailyData = {};
     localStorage.setItem(STORAGE_KEY_DAILY_DATA, JSON.stringify(dailyData));
-    localStorage.setItem(JULY_INIT_KEY, 'true');
+    localStorage.setItem(CLEAR_DATA_V3_KEY, 'true');
   }
 
   const savedTasks = localStorage.getItem(STORAGE_KEY_TASKS);
@@ -292,7 +280,7 @@ function loadData() {
     }));
   }
 
-  cloudUrl = localStorage.getItem(STORAGE_KEY_CLOUD_URL) || 'https://script.google.com/macros/s/AKfycbwapXUGoq-kv12IUbM4BD1wqvs_CGaoaYGG8K12Pj55GTdhgGYPahMTNEMGYcxY7UGkmA/exec';
+  cloudUrl = localStorage.getItem(STORAGE_KEY_CLOUD_URL) || 'https://script.google.com/macros/s/AKfycbyLw2A159conL0Z0dSLBM2x1PX2wtVseXDZ1-U17byocHM59d0STNGx6ElmlNUDAaxlpg/exec';
 
   populateSettingsForm();
 }
@@ -312,6 +300,12 @@ function populateSettingsForm() {
       radio.checked = true;
     }
   });
+
+  const evtWeightInput = document.getElementById('setting-event-weight');
+  if (evtWeightInput) evtWeightInput.value = appSettings.eventWeight || 18;
+
+  const regWeightInput = document.getElementById('setting-regular-weight');
+  if (regWeightInput) regWeightInput.value = appSettings.regularWeight || 3;
 
   for (let d = 0; d < 7; d++) {
     const dayKey = d === 0 ? 'sun' : d === 1 ? 'mon' : d === 2 ? 'tue' : d === 3 ? 'wed' : d === 4 ? 'thu' : d === 5 ? 'fri' : 'sat';
@@ -473,6 +467,15 @@ function setupEventListeners() {
         appSettings.calcMode = radio.value;
       }
     });
+
+    const evtWeightInput = document.getElementById('setting-event-weight');
+    if (evtWeightInput) {
+      appSettings.eventWeight = parseInt(evtWeightInput.value) || 18;
+    }
+    const regWeightInput = document.getElementById('setting-regular-weight');
+    if (regWeightInput) {
+      appSettings.regularWeight = parseInt(regWeightInput.value) || 3;
+    }
 
     for (let d = 0; d < 7; d++) {
       const dayKey = d === 0 ? 'sun' : d === 1 ? 'mon' : d === 2 ? 'tue' : d === 3 ? 'wed' : d === 4 ? 'thu' : d === 5 ? 'fri' : 'sat';
@@ -661,72 +664,69 @@ function getDatesInMonth(monthNum) {
 function getDailyTargetsForMonth(monthNum) {
   const dates = getDatesInMonth(monthNum);
   const monthTarget = appSettings.monthlyTargets[monthNum] || 0;
-  const julyTarget = appSettings.monthlyTargets[7] || 700000;
-  const monthRatio = monthTarget / julyTarget;
+  const weeklyTarget = monthTarget * 1.2 * 0.25;
 
-  const rawDays = dates.map(date => {
+  const eventWeight = appSettings.eventWeight || 18;
+  const regularWeight = appSettings.regularWeight || 3;
+  const totalWeight = eventWeight + regularWeight;
+  const eventDaysPerWeek = 3; // Mon, Fri, Sat
+  const regularDaysPerWeek = 2; // Wed, Sun
+
+  const eventFraction = totalWeight > 0 ? (eventWeight / totalWeight) / eventDaysPerWeek : 0;
+  const regularFraction = totalWeight > 0 ? (regularWeight / totalWeight) / regularDaysPerWeek : 0;
+
+  return dates.map(date => {
     const dayOfWeek = date.getDay(); // 0 = Sun, 1 = Mon...
     const dateStr = formatDate(date);
     
-    let eventName = '';
-    if (dailyData[dateStr] && dailyData[dateStr].event !== undefined) {
-      eventName = dailyData[dateStr].event;
+    // Default event name based on calendar
+    let defaultEventName = '';
+    if (monthNum === 7 && dayOfWeek === 6) {
+      defaultEventName = 'ビアガーデン';
+    } else if (dayOfWeek === 1 || dayOfWeek === 5 || dayOfWeek === 6) {
+      defaultEventName = 'イベント日';
+    } else if (dayOfWeek === 3 || dayOfWeek === 0) {
+      defaultEventName = '通常営業';
     } else {
-      if (monthNum === 7 && dayOfWeek === 6) {
-        eventName = 'ビアガーデン';
-      } else if (dayOfWeek === 1 || dayOfWeek === 5 || dayOfWeek === 6) {
-        eventName = 'イベント日';
-      } else if (dayOfWeek === 3 || dayOfWeek === 0) {
-        eventName = '通常営業';
-      } else {
-        eventName = '定休日';
-      }
+      defaultEventName = '定休日';
     }
 
-    let rawBase = 0;
-    if (monthNum === 7 && dayOfWeek === 6) {
-      rawBase = appSettings.satBeerGardenJulyTarget; // 70k for Saturday in July
-    } else {
-      rawBase = appSettings.weekdayTargets[dayOfWeek];
+    // Override with user selection if exists
+    let eventName = defaultEventName;
+    if (dailyData[dateStr] && dailyData[dateStr].event) {
+      eventName = String(dailyData[dateStr].event);
     }
+    
+    // Calculate fraction based strictly on eventName
+    let fraction = 0;
+    if (eventName === '定休日' || eventName === '休み') {
+      fraction = 0;
+    } else if (eventName.includes('イベント') || eventName.includes('ビアガーデン')) {
+      fraction = eventFraction;
+    } else if (eventName.includes('通常')) {
+      fraction = regularFraction;
+    } else {
+      // Fallback
+      fraction = 0;
+    }
+    
+    // Round to the nearest thousand yen
+    const target = Math.round((weeklyTarget * fraction) / 1000) * 1000;
 
     return {
       date,
       dateStr,
       dayOfWeek,
       eventName,
-      rawBase
+      target
     };
   });
-
-  if (appSettings.calcMode === 'proportional') {
-    const totalRawBase = rawDays.reduce((sum, d) => sum + d.rawBase, 0);
-    const scaleFactor = totalRawBase > 0 ? monthTarget / totalRawBase : 0;
-    
-    return rawDays.map(d => {
-      const target = Math.round((d.rawBase * scaleFactor) / 100) * 100;
-      return {
-        ...d,
-        target
-      };
-    });
-  } else {
-    return rawDays.map(d => {
-      const target = Math.round((d.rawBase * monthRatio) / 100) * 100;
-      return {
-        ...d,
-        target
-      };
-    });
-  }
 }
 
 // Get scaled weekly target for the month
 function getWeeklyTargetForMonth(monthNum) {
   const monthTarget = appSettings.monthlyTargets[monthNum] || 0;
-  const julyTarget = appSettings.monthlyTargets[7] || 700000;
-  const ratio = monthTarget / julyTarget;
-  return Math.round(appSettings.weeklyTargetBase * ratio);
+  return Math.round(monthTarget * 1.2 * 0.25);
 }
 
 // Format Date object to YYYY-MM-DD
@@ -860,6 +860,10 @@ function renderApp() {
   let totalCustomers = 0;
   let activeDaysCount = 0;
 
+  let targetToToday = 0;
+  let actualToToday = 0;
+  const todayStr = formatDate(new Date());
+
   dailyTargets.forEach(d => {
     totalTarget += d.target;
     const actual = dailyData[d.dateStr] ? (dailyData[d.dateStr].actualSales || 0) : 0;
@@ -870,9 +874,15 @@ function renderApp() {
     if (actual > 0) {
       activeDaysCount++;
     }
+
+    if (d.dateStr <= todayStr) {
+      targetToToday += d.target;
+      actualToToday += actual;
+    }
   });
 
-  const progressPct = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
+  const monthTargetVal = appSettings.monthlyTargets[activeMonth] || 0;
+  const progressPct = monthTargetVal > 0 ? (totalActual / monthTargetVal) * 100 : 0;
   const avgSpend = totalCustomers > 0 ? Math.round(totalActual / totalCustomers) : 0;
 
   // Render KPIs
@@ -889,8 +899,7 @@ function renderApp() {
     progressBadge.className = 'trend-badge danger';
   }
 
-  document.getElementById('kpi-target-type').textContent = 
-    appSettings.calcMode === 'proportional' ? '比率調整モード適用中' : '絶対値モード（ July比率 ）';
+  document.getElementById('kpi-target-type').textContent = '曜日依存（比率固定計算）';
 
   document.getElementById('kpi-week-target').textContent = formatYen(weeklyTarget);
   document.getElementById('kpi-week-status').textContent = `${activeMonth}月の週目標 (換算値)`;
@@ -952,7 +961,7 @@ function renderDashboardCalendar() {
   dailyTargets.forEach(d => {
     const cell = document.createElement('div');
     const actual = dailyData[d.dateStr] || {};
-    const shiftsList = actual.shifts || [];
+    const shiftsList = Array.isArray(actual.shifts) ? actual.shifts : [];
     
     // Calendar classes
     let cellClass = 'calendar-cell';
@@ -1038,32 +1047,51 @@ function renderDailyDetailPanel() {
   const defaultEventName = matchedDay ? matchedDay.eventName : '';
 
   const targetSalesEl = document.getElementById('detail-target-sales');
-  const eventBadgeEl = document.getElementById('detail-event-badge');
+  const eventSelectEl = document.getElementById('detail-event-select');
 
   if (dailyTargetVal > 0) {
     targetSalesEl.textContent = formatYen(dailyTargetVal);
-    targetSalesEl.className = 'detail-val font-bold text-accent';
-    
-    eventBadgeEl.textContent = defaultEventName;
-    if (defaultEventName.includes('ビアガーデン')) {
-      eventBadgeEl.className = 'badge badge-beer';
-    } else if (defaultEventName.includes('イベント')) {
-      eventBadgeEl.className = 'badge badge-event';
-    } else {
-      eventBadgeEl.className = 'badge badge-normal';
-    }
+    targetSalesEl.className = 'detail-val font-bold text-accent neon-text-green';
   } else {
     targetSalesEl.textContent = '休み (定休日)';
     targetSalesEl.className = 'detail-val font-bold text-secondary';
-    eventBadgeEl.textContent = '定休日';
-    eventBadgeEl.className = 'badge badge-closed';
+  }
+
+  if (eventSelectEl) {
+    let exists = false;
+    for (let i = 0; i < eventSelectEl.options.length; i++) {
+      if (eventSelectEl.options[i].value === defaultEventName) {
+        exists = true; break;
+      }
+    }
+    if (!exists && defaultEventName) {
+      const newOpt = document.createElement('option');
+      newOpt.value = defaultEventName;
+      newOpt.textContent = defaultEventName;
+      eventSelectEl.appendChild(newOpt);
+    }
+    eventSelectEl.value = (dailyData[selectedDateStr] && dailyData[selectedDateStr].event) ? dailyData[selectedDateStr].event : (defaultEventName || '');
+
+    const updateSelectStyle = () => {
+      const val = eventSelectEl.value;
+      eventSelectEl.className = 'form-select text-xs ml-2 ';
+      if (val.includes('ビアガーデン')) eventSelectEl.style.backgroundColor = 'var(--accent-primary)';
+      else if (val.includes('イベント')) eventSelectEl.style.backgroundColor = 'var(--neon-purple)';
+      else if (val === '定休日' || val === '休み') eventSelectEl.style.backgroundColor = 'var(--bg-secondary)';
+      else eventSelectEl.style.backgroundColor = 'var(--primary-color)';
+      eventSelectEl.style.color = '#fff';
+      eventSelectEl.style.border = 'none';
+      eventSelectEl.style.fontWeight = 'bold';
+    };
+    updateSelectStyle();
+    eventSelectEl.onchange = updateSelectStyle;
   }
 
   // Load saved actual sales, customers, memo, shifts
   const actual = dailyData[selectedDateStr] || {};
   
-  document.getElementById('detail-actual-sales').value = actual.actualSales || '';
-  document.getElementById('detail-actual-customers').value = actual.customers || '';
+  document.getElementById('detail-actual-sales').value = actual.actualSales !== undefined ? actual.actualSales : '';
+  document.getElementById('detail-actual-customers').value = actual.customers !== undefined ? actual.customers : '';
   document.getElementById('detail-memo').value = actual.memo || '';
 
   // Load shifts (Checkboxes)
@@ -1115,6 +1143,10 @@ function saveDailyDetailFromPanel() {
   const customers = parseInt(document.getElementById('detail-actual-customers').value) || 0;
   const memo = document.getElementById('detail-memo').value;
 
+  // Read event name from select dropdown
+  const eventSelectEl = document.getElementById('detail-event-select');
+  const eventName = eventSelectEl ? eventSelectEl.value : '';
+
   // Read shifts checkboxes
   const shifts = [];
   const shiftInputs = document.getElementsByName('detail-shift');
@@ -1124,11 +1156,9 @@ function saveDailyDetailFromPanel() {
     }
   });
 
-  // Keep event name from initial template or current database
-  const dailyTargets = getDailyTargetsForMonth(activeMonth);
-  const matchedDay = dailyTargets.find(d => d.dateStr === dateStr);
-  const defaultEventName = matchedDay ? matchedDay.eventName : '';
-  const currentEvent = dailyData[dateStr] ? (dailyData[dateStr].event || defaultEventName) : defaultEventName;
+  if (!dailyData[dateStr]) {
+    dailyData[dateStr] = { event: '', actualSales: 0, customers: 0, shifts: [], memo: '' };
+  }
 
   dailyData[dateStr] = {
     ...dailyData[dateStr],
@@ -1136,8 +1166,12 @@ function saveDailyDetailFromPanel() {
     customers,
     memo,
     shifts,
-    event: currentEvent
+    event: eventName || dailyData[dateStr].event
   };
+
+  saveToLocalStorage();
+  showToast(`${dateStr} の実績データを保存しました！`);
+  renderApp(); // Refresh everything
 }
 
 // ----------------------------------------------------
@@ -1157,156 +1191,231 @@ function renderMonthlySheetTable(dailyTargets, weeklyTarget) {
   let weekIndex = 1;
 
   dailyTargets.forEach((d, idx) => {
-    const actual = dailyData[d.dateStr] || { event: d.eventName, actualSales: 0, customers: 0, shifts: [], memo: '' };
-    const dateObj = d.date;
-    const dayOfWeek = d.dayOfWeek;
-    const spend = actual.customers > 0 ? Math.round(actual.actualSales / actual.customers) : 0;
-    const savedShifts = actual.shifts || [];
-
-    // Build row class
-    let rowClass = '';
-    if (dayOfWeek === 6) { // Sat
-      rowClass = d.eventName.includes('ビアガーデン') ? 'beer-garden-row' : 'weekend-sat';
-    } else if (dayOfWeek === 0) { // Sun
-      rowClass = 'weekend-sun';
-    } else if (d.eventName.includes('イベント')) {
-      rowClass = 'event-row';
-    } else if (d.target === 0 && d.dayOfWeek !== 0 && d.dayOfWeek !== 6) {
-      rowClass = 'closed-row';
-    }
-
-    const tr = document.createElement('tr');
-    tr.className = rowClass;
-    tr.setAttribute('data-date', d.dateStr);
-
-    const dateFormatted = formatDateShort(dateObj);
-
-    // Event badges
-    let badgeHtml = '';
-    if (d.eventName.includes('ビアガーデン')) {
-      badgeHtml = `<span class="badge badge-beer"><i class="fa-solid fa-beer-mug-empty"></i> ${d.eventName}</span>`;
-    } else if (d.eventName.includes('イベント')) {
-      badgeHtml = `<span class="badge badge-event"><i class="fa-solid fa-star"></i> ${d.eventName}</span>`;
-    } else if (d.target === 0) {
-      badgeHtml = `<span class="badge badge-closed">定休</span>`;
-    } else {
-      badgeHtml = `<span class="badge badge-normal">通常</span>`;
-    }
-
-    // Shift Mini buttons toggles (Taiyou, Nana, Renren)
-    const isTaiyouChecked = savedShifts.includes('たいよう');
-    const isNanaChecked = savedShifts.includes('なな');
-    const isRenrenChecked = savedShifts.includes('れんれん');
-
-    const shiftTogglesHtml = `
-      <div class="shift-checkbox-group" style="gap: 4px; margin-top: 0;">
-        <button type="button" class="mini-shift-badge ${isTaiyouChecked ? 'shift-taiyou' : ''}" data-staff="たいよう" style="cursor:pointer; border:1px solid var(--border-color); font-weight:bold;">たい</button>
-        <button type="button" class="mini-shift-badge ${isNanaChecked ? 'shift-nana' : ''}" data-staff="なな" style="cursor:pointer; border:1px solid var(--border-color); font-weight:bold;">なな</button>
-        <button type="button" class="mini-shift-badge ${isRenrenChecked ? 'shift-renren' : ''}" data-staff="れんれん" style="cursor:pointer; border:1px solid var(--border-color); font-weight:bold;">れん</button>
-      </div>
-    `;
-
-    tr.innerHTML = `
-      <td><strong>${dateFormatted}</strong></td>
-      <td><span class="day-badge ${getDayClass(dayOfWeek)}">${getDayJp(dayOfWeek)}</span></td>
-      <td>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <input type="text" class="table-input input-event" value="${actual.event || d.eventName}" style="width: 100px; display: none;">
-          <span class="event-text-label">${badgeHtml}</span>
-        </div>
-      </td>
-      <td>${shiftTogglesHtml}</td>
-      <td style="text-align: right; font-family: monospace;">${formatYen(d.target)}</td>
-      <td>
-        <input type="number" class="table-input input-actual-sales" value="${actual.actualSales || ''}" min="0" step="5000" placeholder="0">
-      </td>
-      <td>
-        <input type="number" class="table-input input-actual-customers" value="${actual.customers || ''}" min="0" placeholder="0">
-      </td>
-      <td style="text-align: right; font-family: monospace;" class="spend-cell">${formatYen(spend)}</td>
-      <td>
-        <input type="text" class="table-input input-memo" value="${actual.memo || ''}" placeholder="メモ...">
-      </td>
-    `;
-
-    // Hook click toggles on Mini Shift badges directly in monthly sheet table cell
-    tr.querySelectorAll('button[data-staff]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const staffName = e.target.getAttribute('data-staff');
-        
-        if (!dailyData[d.dateStr]) {
-          dailyData[d.dateStr] = { event: d.eventName, actualSales: 0, customers: 0, shifts: [], memo: '' };
-        }
-        if (!dailyData[d.dateStr].shifts) {
-          dailyData[d.dateStr].shifts = [];
-        }
-
-        const staffShifts = dailyData[d.dateStr].shifts;
-        const sIndex = staffShifts.indexOf(staffName);
-        if (sIndex > -1) {
-          staffShifts.splice(sIndex, 1);
-          e.target.className = 'mini-shift-badge';
-        } else {
-          staffShifts.push(staffName);
-          let badgeClass = 'mini-shift-badge';
-          if (staffName === 'たいよう') badgeClass += ' shift-taiyou';
-          else if (staffName === 'なな') badgeClass += ' shift-nana';
-          else if (staffName === 'れんれん') badgeClass += ' shift-renren';
-          e.target.className = badgeClass;
-        }
-
-        saveToLocalStorage();
-        // Update customer spend calculation and details, keep view intact
-        showToast(`${d.dateStr} のシフトを変更しました。`);
-      });
-    });
-
-    const salesInput = tr.querySelector('.input-actual-sales');
-    const custInput = tr.querySelector('.input-actual-customers');
-    const spendCell = tr.querySelector('.spend-cell');
-
-    const updateSpend = () => {
-      const sVal = parseInt(salesInput.value) || 0;
-      const cVal = parseInt(custInput.value) || 0;
-      const sp = cVal > 0 ? Math.round(sVal / cVal) : 0;
-      spendCell.textContent = formatYen(sp);
-    };
-
-    salesInput.addEventListener('input', updateSpend);
-    custInput.addEventListener('input', updateSpend);
-
-    tableBody.appendChild(tr);
-    currentWeekRows.push({ target: d.target, dateStr: d.dateStr });
-
-    // Weekly sub-totals (Weeks run Friday to Thursday)
-    if (dayOfWeek === 4 || idx === dailyTargets.length - 1) {
-      let weekTargetSum = currentWeekRows.reduce((sum, r) => sum + r.target, 0);
-      let weekActualSum = currentWeekRows.reduce((sum, r) => {
-        const actualVal = dailyData[r.dateStr] ? (dailyData[r.dateStr].actualSales || 0) : 0;
-        return sum + actualVal;
-      }, 0);
+    try {
+      const actual = dailyData[d.dateStr] || { event: '', actualSales: 0, customers: 0, shifts: [], memo: '' };
+      const dateObj = d.date;
+      const dayOfWeek = d.dayOfWeek;
+      const spend = actual.customers > 0 ? Math.round(actual.actualSales / actual.customers) : 0;
       
-      const weekProgress = weekTargetSum > 0 ? (weekActualSum / weekTargetSum) * 100 : 0;
-      const weekVsBaseProgress = weeklyTarget > 0 ? (weekActualSum / weeklyTarget) * 100 : 0;
+      let savedShifts = actual.shifts || [];
+      if (!Array.isArray(savedShifts)) savedShifts = [];
+      
+      const evName = String(actual.event || d.eventName || '');
 
-      const subtotalTr = document.createElement('tr');
-      subtotalTr.className = 'weekly-total-row';
-      subtotalTr.innerHTML = `
-        <td colspan="4" style="text-align: right;"><strong>第 ${weekIndex} 週 合計:</strong></td>
-        <td style="text-align: right; font-family: monospace;">${formatYen(weekTargetSum)}</td>
-        <td style="text-align: right; font-family: monospace; font-weight: 800;">${formatYen(weekActualSum)}</td>
-        <td colspan="2" style="font-size: 11px;">
-          週進捗: <span class="${weekProgress >= 100 ? 'text-success' : 'text-secondary'}">${weekProgress.toFixed(1)}%</span>
+      // Build row class
+      let rowClass = '';
+      if (dayOfWeek === 6) { // Sat
+        rowClass = evName.includes('ビアガーデン') ? 'beer-garden-row' : 'weekend-sat';
+      } else if (dayOfWeek === 0) { // Sun
+        rowClass = 'weekend-sun';
+      } else if (evName.includes('イベント')) {
+        rowClass = 'event-row';
+      } else if (d.target === 0 && d.dayOfWeek !== 0 && d.dayOfWeek !== 6) {
+        rowClass = 'closed-row';
+      }
+
+      const tr = document.createElement('tr');
+      tr.className = rowClass;
+      tr.setAttribute('data-date', d.dateStr);
+
+      const dateFormatted = formatDateShort(dateObj);
+
+      // Event badges
+      let badgeHtml = '';
+      if (evName.includes('ビアガーデン')) {
+        badgeHtml = `<span class="badge badge-beer"><i class="fa-solid fa-beer-mug-empty"></i> ${evName}</span>`;
+      } else if (evName.includes('イベント')) {
+        badgeHtml = `<span class="badge badge-event"><i class="fa-solid fa-star"></i> ${evName}</span>`;
+      } else if (d.target === 0) {
+        badgeHtml = `<span class="badge badge-closed">定休</span>`;
+      } else {
+        badgeHtml = `<span class="badge badge-normal">通常</span>`;
+      }
+
+      // Shift Mini buttons toggles (Taiyou, Nana, Renren)
+      const isTaiyouChecked = savedShifts.includes('たいよう');
+      const isNanaChecked = savedShifts.includes('なな');
+      const isRenrenChecked = savedShifts.includes('れんれん');
+
+      const shiftTogglesHtml = `
+        <div class="shift-checkbox-group" style="gap: 4px; margin-top: 0;">
+          <button type="button" class="mini-shift-badge ${isTaiyouChecked ? 'shift-taiyou' : ''}" data-staff="たいよう" style="cursor:pointer; border:1px solid var(--border-color); font-weight:bold;">たい</button>
+          <button type="button" class="mini-shift-badge ${isNanaChecked ? 'shift-nana' : ''}" data-staff="なな" style="cursor:pointer; border:1px solid var(--border-color); font-weight:bold;">なな</button>
+          <button type="button" class="mini-shift-badge ${isRenrenChecked ? 'shift-renren' : ''}" data-staff="れんれん" style="cursor:pointer; border:1px solid var(--border-color); font-weight:bold;">れん</button>
+        </div>
+      `;
+
+      // Calculate achievement rate
+      const actualSales = actual.actualSales || 0;
+      const targetSales = d.target || 0;
+      let achvRate = 0;
+      if (targetSales > 0) {
+        achvRate = (actualSales / targetSales) * 100;
+      }
+      const achvRateStr = targetSales > 0 ? `${achvRate.toFixed(1)}%` : '-';
+      let achvColor = '';
+      if (achvRate >= 100) achvColor = 'color: var(--neon-emerald); font-weight: bold;';
+      else if (achvRate > 0) achvColor = 'color: var(--neon-yellow);';
+      else achvColor = 'color: var(--text-muted);';
+
+      // Instead of the input and span, let's make a select dropdown!
+      const isCustomEvent = !['通常営業', 'イベント日', 'ビアガーデン', '定休日', '休み'].includes(evName);
+      const selectHtml = `
+        <select class="table-input input-event" style="width: 110px; padding: 2px 4px; border: 1px solid var(--border-color); border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff;">
+          <option value="通常営業" ${evName.includes('通常') ? 'selected' : ''}>通常営業</option>
+          <option value="イベント日" ${evName.includes('イベント') ? 'selected' : ''}>イベント日</option>
+          <option value="ビアガーデン" ${evName.includes('ビアガーデン') ? 'selected' : ''}>ビアガーデン</option>
+          <option value="定休日" ${evName === '定休日' || evName === '休み' ? 'selected' : ''}>定休日</option>
+          ${isCustomEvent && evName ? `<option value="${evName}" selected>${evName}</option>` : ''}
+        </select>
+      `;
+
+      tr.innerHTML = `
+        <td><strong>${dateFormatted}</strong></td>
+        <td><span class="day-badge ${getDayClass(dayOfWeek) || ''}">${getDayJp(dayOfWeek) || ''}</span></td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            ${selectHtml}
+          </div>
         </td>
-        <td style="font-size: 11px;">
-          週目標達成率 (目標 ${formatYen(weeklyTarget)}): 
-          <span style="font-weight: 800; color: ${weekVsBaseProgress >= 100 ? '#10b981' : '#f59e0b'}">${weekVsBaseProgress.toFixed(1)}%</span>
+        <td>${shiftTogglesHtml}</td>
+        <td style="text-align: right; font-family: monospace;">${formatYen(targetSales)}</td>
+        <td>
+          <input type="number" class="table-input input-actual-sales" value="${actual.actualSales !== undefined ? actual.actualSales : ''}" min="0" step="1000" placeholder="0">
+        </td>
+        <td style="text-align: right; font-family: monospace; ${achvColor}" class="achv-cell">${achvRateStr}</td>
+        <td>
+          <input type="number" class="table-input input-actual-customers" value="${actual.customers !== undefined ? actual.customers : ''}" min="0" placeholder="0">
+        </td>
+        <td style="text-align: right; font-family: monospace;" class="spend-cell">${formatYen(spend)}</td>
+        <td>
+          <input type="text" class="table-input input-memo" value="${actual.memo || ''}" placeholder="メモ...">
         </td>
       `;
-      tableBody.appendChild(subtotalTr);
 
-      currentWeekRows = [];
-      weekIndex++;
+      // Hook click toggles on Mini Shift badges directly in monthly sheet table cell
+      tr.querySelectorAll('button[data-staff]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const staffName = e.target.getAttribute('data-staff');
+          
+          if (!dailyData[d.dateStr]) {
+            dailyData[d.dateStr] = { event: evName, actualSales: 0, customers: 0, shifts: [], memo: '' };
+          }
+          if (!dailyData[d.dateStr].shifts || !Array.isArray(dailyData[d.dateStr].shifts)) {
+            dailyData[d.dateStr].shifts = [];
+          }
+
+          const staffShifts = dailyData[d.dateStr].shifts;
+          const sIndex = staffShifts.indexOf(staffName);
+          if (sIndex > -1) {
+            staffShifts.splice(sIndex, 1);
+            e.target.className = 'mini-shift-badge';
+          } else {
+            staffShifts.push(staffName);
+            let badgeClass = 'mini-shift-badge';
+            if (staffName === 'たいよう') badgeClass += ' shift-taiyou';
+            else if (staffName === 'なな') badgeClass += ' shift-nana';
+            else if (staffName === 'れんれん') badgeClass += ' shift-renren';
+            e.target.className = badgeClass;
+          }
+          localStorage.setItem(STORAGE_KEY_DAILY_DATA, JSON.stringify(dailyData));
+        });
+      });
+
+      const eventInput = tr.querySelector('.input-event');
+      const salesInput = tr.querySelector('.input-actual-sales');
+      const custInput = tr.querySelector('.input-actual-customers');
+      const memoInput = tr.querySelector('.input-memo');
+      const spendCell = tr.querySelector('.spend-cell');
+      const achvCell = tr.querySelector('.achv-cell');
+
+      const updateSpendAndAchv = () => {
+        const sVal = parseInt(salesInput.value) || 0;
+        const cVal = parseInt(custInput.value) || 0;
+        const s = cVal > 0 ? Math.round(sVal / cVal) : 0;
+        spendCell.textContent = formatYen(s);
+
+        let aRate = 0;
+        if (targetSales > 0) {
+          aRate = (sVal / targetSales) * 100;
+        }
+        const aRateStr = targetSales > 0 ? `${aRate.toFixed(1)}%` : '-';
+        achvCell.textContent = aRateStr;
+
+        if (aRate >= 100) {
+          achvCell.style.color = 'var(--neon-emerald)';
+          achvCell.style.fontWeight = 'bold';
+        } else if (aRate > 0) {
+          achvCell.style.color = 'var(--neon-yellow)';
+          achvCell.style.fontWeight = 'normal';
+        } else {
+          achvCell.style.color = 'var(--text-muted)';
+          achvCell.style.fontWeight = 'normal';
+        }
+      };
+
+      const autoSaveRow = (e) => {
+        if (!dailyData[d.dateStr]) {
+          dailyData[d.dateStr] = {};
+        }
+        dailyData[d.dateStr].event = eventInput ? eventInput.value : '';
+        dailyData[d.dateStr].actualSales = salesInput ? (parseInt(salesInput.value) || 0) : 0;
+        dailyData[d.dateStr].customers = custInput ? (parseInt(custInput.value) || 0) : 0;
+        dailyData[d.dateStr].memo = memoInput ? memoInput.value : '';
+        
+        localStorage.setItem(STORAGE_KEY_DAILY_DATA, JSON.stringify(dailyData));
+        
+        // Update top KPI numbers without fully re-rendering everything and losing focus
+        renderDashboardData();
+        
+        if (e && e.target === eventInput) {
+          renderApp(); // Event change requires full re-render to update backgrounds
+        }
+      };
+
+      if (salesInput) salesInput.addEventListener('input', updateSpendAndAchv);
+      if (custInput) custInput.addEventListener('input', updateSpendAndAchv);
+
+      if (eventInput) eventInput.addEventListener('change', autoSaveRow);
+      if (salesInput) salesInput.addEventListener('change', autoSaveRow);
+      if (custInput) custInput.addEventListener('change', autoSaveRow);
+      if (memoInput) memoInput.addEventListener('change', autoSaveRow);
+
+      tableBody.appendChild(tr);
+      currentWeekRows.push({ target: targetSales, dateStr: d.dateStr });
+
+      // Weekly sub-totals (Weeks run Friday to Thursday)
+      if (dayOfWeek === 4 || idx === dailyTargets.length - 1) {
+        let weekTargetSum = currentWeekRows.reduce((sum, r) => sum + r.target, 0);
+        let weekActualSum = currentWeekRows.reduce((sum, r) => {
+          const actualVal = dailyData[r.dateStr] ? (dailyData[r.dateStr].actualSales || 0) : 0;
+          return sum + actualVal;
+        }, 0);
+        
+        const weekProgress = weekTargetSum > 0 ? (weekActualSum / weekTargetSum) * 100 : 0;
+        const weekVsBaseProgress = weeklyTarget > 0 ? (weekActualSum / weeklyTarget) * 100 : 0;
+
+        const subtotalTr = document.createElement('tr');
+        subtotalTr.className = 'weekly-total-row';
+        const weekProgressColor = weekTargetSum > 0 && weekProgress >= 100 ? 'var(--neon-emerald)' : 'var(--text-secondary)';
+        subtotalTr.innerHTML = `
+          <td colspan="4" style="text-align: right;"><strong>第 ${weekIndex} 週 合計:</strong></td>
+          <td style="text-align: right; font-family: monospace;">${formatYen(weekTargetSum)}</td>
+          <td style="text-align: right; font-family: monospace; font-weight: 800;">${formatYen(weekActualSum)}</td>
+          <td style="text-align: right; font-family: monospace; font-weight: 800; color: ${weekProgressColor}">${weekTargetSum > 0 ? weekProgress.toFixed(1) + '%' : '-'}</td>
+          <td colspan="2" style="font-size: 11px;"></td>
+          <td style="font-size: 11px;">
+            週目標達成率 (目標 ${formatYen(weeklyTarget)}): 
+            <span style="font-weight: 800; color: ${weekVsBaseProgress >= 100 ? '#10b981' : '#f59e0b'}">${weekVsBaseProgress.toFixed(1)}%</span>
+          </td>
+        `;
+        tableBody.appendChild(subtotalTr);
+
+        currentWeekRows = [];
+        weekIndex++;
+      }
+    } catch (e) {
+      console.error('Error rendering row for', d.dateStr, e);
     }
   });
 }
@@ -1494,7 +1603,7 @@ function renderAnalyticsTab(dailyTargets) {
       weekdayStats[dayOfWeek].totalCustomers += cust;
       weekdayStats[dayOfWeek].count++;
 
-      const isEvent = actual.event && (actual.event.includes('イベント') || actual.event.includes('ビアガーデン'));
+      const isEvent = d.eventName && (d.eventName.includes('イベント') || d.eventName.includes('ビアガーデン'));
       if (isEvent) {
         eventTotalSales += sales;
         eventDaysCount++;

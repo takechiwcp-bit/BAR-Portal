@@ -250,6 +250,25 @@ body {
   color: var(--text-secondary);
 }
 
+.custom-period-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-period-picker input[type="date"] {
+  width: 140px;
+}
+
+.period-separator {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.hidden {
+  display: none !important;
+}
+
 /* Sections Animation */
 .content-section {
   display: none;

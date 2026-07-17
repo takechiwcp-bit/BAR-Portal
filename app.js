@@ -164,6 +164,9 @@ let menuData = {}; // Cafe & Bar Menu items list
 let equipment = []; // Cafe & Bar Equipment & Stock list
 let cloudUrl = ''; // Google Sheets (GAS Web App) Sync API URL
 let activeMonth = 7; // Current active month (July)
+let periodMode = 'month'; // 'month' or 'custom'
+let customStartDate = '';
+let customEndDate = '';
 let activeTab = 'dashboard';
 let selectedDateStr = ''; // YYYY-MM-DD format
 
@@ -427,6 +430,40 @@ function setupEventListeners() {
     });
   }
 
+  // Period Mode Selection
+  document.getElementById('global-period-mode').addEventListener('change', (e) => {
+    periodMode = e.target.value;
+    const monthSelect = document.getElementById('global-month-select');
+    const customPicker = document.getElementById('custom-period-picker');
+    
+    if (periodMode === 'custom') {
+      monthSelect.classList.add('hidden');
+      customPicker.classList.remove('hidden');
+      
+      if (!customStartDate || !customEndDate) {
+        const lastDay = new Date(CURRENT_YEAR, activeMonth, 0).getDate();
+        customStartDate = `${CURRENT_YEAR}-${String(activeMonth).padStart(2, '0')}-01`;
+        customEndDate = `${CURRENT_YEAR}-${String(activeMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        document.getElementById('custom-start-date').value = customStartDate;
+        document.getElementById('custom-end-date').value = customEndDate;
+      }
+    } else {
+      monthSelect.classList.remove('hidden');
+      customPicker.classList.add('hidden');
+    }
+    renderApp();
+  });
+
+  document.getElementById('custom-start-date').addEventListener('change', (e) => {
+    customStartDate = e.target.value;
+    if (customStartDate && customEndDate) renderApp();
+  });
+
+  document.getElementById('custom-end-date').addEventListener('change', (e) => {
+    customEndDate = e.target.value;
+    if (customStartDate && customEndDate) renderApp();
+  });
+
   // Global Month Selector
   const monthSelect = document.getElementById('global-month-select');
   monthSelect.addEventListener('change', (e) => {
@@ -669,6 +706,33 @@ function getDatesInMonth(monthNum) {
   return dates;
 }
 
+// Calculate targets for a specific date range
+function getDailyTargetsForPeriod(startDateStr, endDateStr) {
+  const start = new Date(startDateStr);
+  const end = new Date(endDateStr);
+  
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+    return [];
+  }
+  
+  const startMonth = start.getMonth() + 1;
+  const endMonth = end.getMonth() + 1;
+  
+  let allTargets = [];
+  
+  // Collect all daily targets for the months involved
+  for (let m = startMonth; m <= endMonth; m++) {
+    const monthTargets = getDailyTargetsForMonth(m);
+    allTargets = allTargets.concat(monthTargets);
+  }
+  
+  // Filter by the specific date range
+  return allTargets.filter(d => {
+    const dDate = new Date(d.dateStr);
+    return dDate >= start && dDate <= end;
+  });
+}
+
 // Calculate targets for each day in a specific month
 function getDailyTargetsForMonth(monthNum) {
   const dates = getDatesInMonth(monthNum);
@@ -798,6 +862,11 @@ function saveDailyDataFromTable() {
   });
 }
 
+// Dashboard view update
+function updateDashboard() {
+  // Deprecated, use renderApp instead
+}
+
 // Generate Demo/Dummy data for testing analytics
 function generateDummyDataForActiveMonth() {
   const dailyTargets = getDailyTargetsForMonth(activeMonth);
@@ -860,10 +929,19 @@ function generateDummyDataForActiveMonth() {
 
 // Master Render Function
 function renderApp() {
-  const dailyTargets = getDailyTargetsForMonth(activeMonth);
-  const weeklyTarget = getWeeklyTargetForMonth(activeMonth);
+  let dailyTargets = [];
+  let weeklyTarget = 0;
+  
+  if (periodMode === 'custom' && customStartDate && customEndDate) {
+    dailyTargets = getDailyTargetsForPeriod(customStartDate, customEndDate);
+    document.getElementById('page-subtitle').textContent = `指定期間の目標達成状況と売上トレンド (${customStartDate} 〜 ${customEndDate})`;
+  } else {
+    dailyTargets = getDailyTargetsForMonth(activeMonth);
+    weeklyTarget = getWeeklyTargetForMonth(activeMonth);
+    document.getElementById('page-subtitle').textContent = '全体の目標達成状況と売上トレンド';
+  }
 
-  // Compute month totals
+  // Compute totals
   let totalTarget = 0;
   let totalActual = 0;
   let totalCustomers = 0;
@@ -890,12 +968,14 @@ function renderApp() {
     }
   });
 
-  const monthTargetVal = appSettings.monthlyTargets[activeMonth] || 0;
-  const progressPct = monthTargetVal > 0 ? (totalActual / monthTargetVal) * 100 : 0;
+  const progressPct = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
   const avgSpend = totalCustomers > 0 ? Math.round(totalActual / totalCustomers) : 0;
 
   // Render KPIs
-  document.getElementById('kpi-month-target').textContent = formatYen(appSettings.monthlyTargets[activeMonth]);
+  const kpiTargetVal = (periodMode === 'custom') ? totalTarget : (appSettings.monthlyTargets[activeMonth] || 0);
+  document.getElementById('kpi-month-target').textContent = formatYen(kpiTargetVal);
+  document.querySelector('#kpi-month-target').previousElementSibling.querySelector('.kpi-title').textContent = (periodMode === 'custom') ? '期間目標売上' : '月間目標売上';
+
   document.getElementById('kpi-month-actual').textContent = formatYen(totalActual);
   
   const progressBadge = document.getElementById('kpi-month-progress-badge');
@@ -907,11 +987,23 @@ function renderApp() {
   } else {
     progressBadge.className = 'trend-badge danger';
   }
+  
+  progressBadge.nextElementSibling.textContent = (periodMode === 'custom') ? '期間目標に対する達成率' : '本日までの目標達成率';
 
   document.getElementById('kpi-target-type').textContent = '曜日依存（比率固定計算）';
 
-  document.getElementById('kpi-week-target').textContent = formatYen(weeklyTarget);
-  document.getElementById('kpi-week-status').textContent = `${activeMonth}月の週目標 (換算値)`;
+  if (periodMode === 'custom') {
+    const businessDays = dailyTargets.filter(d => !d.isClosed).length;
+    const avgTarget = businessDays > 0 ? totalTarget / businessDays : 0;
+    
+    document.getElementById('kpi-week-target').textContent = formatYen(avgTarget);
+    document.getElementById('kpi-week-status').textContent = `営業日数: ${businessDays}日`;
+    document.querySelector('#kpi-week-target').previousElementSibling.querySelector('.kpi-title').textContent = '1日平均目標';
+  } else {
+    document.getElementById('kpi-week-target').textContent = formatYen(weeklyTarget);
+    document.getElementById('kpi-week-status').textContent = `${activeMonth}月の週目標 (換算値)`;
+    document.querySelector('#kpi-week-target').previousElementSibling.querySelector('.kpi-title').textContent = '週次目標状況';
+  }
 
   document.getElementById('kpi-customers-spend').textContent = `${totalCustomers.toLocaleString('ja-JP')}人 / ${formatYen(avgSpend)}`;
   document.getElementById('kpi-avg-spend-desc').textContent = `営業稼働日数: ${activeDaysCount}日`;

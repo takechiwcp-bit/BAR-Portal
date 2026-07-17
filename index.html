@@ -97,8 +97,14 @@
         </div>
         <div class="header-actions">
           <div class="month-selector-wrapper">
-            <label for="global-month-select">対象月:</label>
-            <select id="global-month-select" class="form-select">
+            <label for="global-period-mode">期間:</label>
+            <select id="global-period-mode" class="form-select" style="width: auto; margin-right: 8px;">
+              <option value="month">月次表示</option>
+              <option value="custom">期間指定</option>
+            </select>
+
+            <!-- 月次モード用 -->
+            <select id="global-month-select" class="form-select month-only">
               <option value="7">7月</option>
               <option value="8">8月</option>
               <option value="9">9月</option>
@@ -106,6 +112,13 @@
               <option value="11">11月</option>
               <option value="12">12月</option>
             </select>
+
+            <!-- カスタム期間モード用 -->
+            <div id="custom-period-picker" class="custom-period-picker hidden">
+              <input type="date" id="custom-start-date" class="form-control" title="開始日">
+              <span class="period-separator">〜</span>
+              <input type="date" id="custom-end-date" class="form-control" title="終了日">
+            </div>
           </div>
           <button id="theme-toggle-btn" class="btn btn-outline" style="margin-right: 8px; width: 40px; height: 38px; padding: 0;" title="テーマ切り替え">
             <i class="fa-solid fa-moon"></i>
